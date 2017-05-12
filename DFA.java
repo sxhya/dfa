@@ -1,35 +1,24 @@
+import org.jetbrains.annotations.NotNull;
+
 import java.util.*;
 
 /**
  * Created by user on 5/11/17.
  */
-public class DFA<State, Alphabet> extends DirectedGraph<State, DFA.Edge<Alphabet>> {
-  private State initialState;
-  private Set<State> acceptStates = new HashSet<>();
-  public enum ProductAnnotation {OR, AND, MINUS};
+public class DFA<State, Alphabet> extends FA<State, Alphabet> {
 
-  void setInitialState(State state) {
-    initialState = state;
+  public DFA(DFA<State, Alphabet> dfa) {
+    super(dfa);
   }
 
-  void setAcceptStates(Set<State> acceptStates) {
-    this.acceptStates = acceptStates;
-  }
-
-  void addTransition(State initialState, Alphabet symbol, State resultingState) {
-    super.addEdge(new Edge<>(symbol), initialState, resultingState);
-  }
-
-  void addDefaultTransition(State initialState, State resultingState) {
-    super.addEdge(new Edge<>(), initialState, resultingState);
-  }
+  public DFA() {super();}
 
   public static<State1, State2, Alphabet> DFA<Pair<State1, State2>, Alphabet> directProduct(DFA<State1, Alphabet> dfa1, DFA<State2, Alphabet> dfa2, ProductAnnotation annotation) {
     DFA<Pair<State1, State2>, Alphabet> result = new DFA<>();
     for (State1 v1 : dfa1.getVertices()){
-      Pair<Map<Alphabet, DFA.Edge<Alphabet>>, Edge<Alphabet>> outbound1 = getLabelMap(dfa1.getOutboundEdges(v1));
+      Pair<Map<Alphabet, FA.Edge<Alphabet>>, Edge<Alphabet>> outbound1 = getLabelMap(dfa1.getOutboundEdges(v1));
       for (State2 v2 : dfa2.getVertices()) {
-        Pair<Map<Alphabet, DFA.Edge<Alphabet>>, Edge<Alphabet>> outbound2 = getLabelMap(dfa2.getOutboundEdges(v2));
+        Pair<Map<Alphabet, FA.Edge<Alphabet>>, Edge<Alphabet>> outbound2 = getLabelMap(dfa2.getOutboundEdges(v2));
         Pair<State1, State2> p = new Pair<>(v1, v2);
         Set<Alphabet> unionAlphabet = new HashSet<>();
         unionAlphabet.addAll(outbound1.a.keySet());
@@ -43,8 +32,8 @@ public class DFA<State, Alphabet> extends DirectedGraph<State, DFA.Edge<Alphabet
         }
 
         for (Alphabet a : unionAlphabet) {
-          DFA.Edge<Alphabet> s1 = outbound1.a.get(a);
-          DFA.Edge<Alphabet> s2 = outbound2.a.get(a);
+          FA.Edge<Alphabet> s1 = outbound1.a.get(a);
+          FA.Edge<Alphabet> s2 = outbound2.a.get(a);
           State1 newState1;
           State2 newState2;
           if (s1 == null) {
@@ -66,14 +55,14 @@ public class DFA<State, Alphabet> extends DirectedGraph<State, DFA.Edge<Alphabet
       }
     }
 
-    result.setInitialState(new Pair<>(dfa1.initialState, dfa2.initialState));
+    result.setInitialState(new Pair<>(dfa1.getInitialState(), dfa2.getInitialState()));
 
     Set<Pair<State1, State2>> aS = new HashSet<>();
 
     for (State1 s1 : dfa1.getVertices())
       for (State2 s2 : dfa2.getVertices()) {
-        boolean a1 = dfa1.acceptStates.contains(s1);
-        boolean a2 = dfa2.acceptStates.contains(s2);
+        boolean a1 = dfa1.getAcceptStates().contains(s1);
+        boolean a2 = dfa2.getAcceptStates().contains(s2);
         boolean a;
         switch (annotation) {
           case OR: a = a1 || a2; break;
@@ -91,49 +80,16 @@ public class DFA<State, Alphabet> extends DirectedGraph<State, DFA.Edge<Alphabet
 
   public static<S, A> boolean runDFA(DFA<S, A> dfa, Iterable<A> list) {
     boolean success;
-    S s = dfa.initialState;
+    S s = dfa.getInitialState();
     for (A a : list)
       s = dfa.getNewState(s, a);
-    success = dfa.acceptStates.contains(s);
+    success = dfa.getAcceptStates().contains(s);
     return success;
-  }
-
-  @Override
-  public String toString() {
-    String result = "";
-    List<List<State>> components = getOrderedVertices(initialState);
-    for (int i = 0; i < components.size(); i++) {
-      int len = 0;
-      boolean isLast = i == components.size() - 1;
-      List<State> component = components.get(i);
-      for (State s : component) {
-        int cL = s.toString().length();
-        if (acceptStates.contains(s) || initialState.equals(s)) cL += 3;
-        if (cL > len) len = cL;
-      }
-
-      for (State s : component) {
-        String label = "";
-        if (s.equals(initialState)) label = "(>) ";
-        label += s.toString();
-        if (acceptStates.contains(s)) label += " (✓)";
-        while (label.length() <= len) label += " ";
-        result += "| " + label + " | ";
-        for (Edge<Alphabet> e : getOutboundEdges(s)) {
-          result +=  e.toString() + " -> " + getCodomain(e) + "; ";
-        }
-        result += "\n";
-      }
-
-      if (!isLast) result += "=== next component === \n";
-    }
-
-    return result;
   }
 
   private State getNewState(State initialState, Alphabet symbol) {
     Pair<Map<Alphabet, Edge<Alphabet>>, Edge<Alphabet>> outbound = DFA.getLabelMap(this.getOutboundEdges(initialState));
-    DFA.Edge<Alphabet> edge = outbound.a.get(symbol);
+    FA.Edge<Alphabet> edge = outbound.a.get(symbol);
     if (edge == null) {
       edge = outbound.b;
     }
@@ -141,33 +97,19 @@ public class DFA<State, Alphabet> extends DirectedGraph<State, DFA.Edge<Alphabet
     return getCodomain(edge);
   }
 
-  private static<X> Pair<Map<X, Edge<X>>, Edge<X>> getLabelMap(Set<DFA.Edge<X>> edges) {
+  @NotNull
+  private static<X> Pair<Map<X, Edge<X>>, Edge<X>> getLabelMap(Set<FA.Edge<X>> edges) {
     HashMap<X, Edge<X>> result = new HashMap<>();
     Edge<X> def = null;
-    for (DFA.Edge<X> e : edges) {
-      if (e.myDefault) {
+    for (FA.Edge<X> e : edges) {
+      if (e.isDefault()) {
         assert (def == null); // there can be only one default edge
         def = e;
       } else {
-        assert (e.label != null);
-        result.put(e.label, e);
+        assert (e.getLabel() != null);
+        result.put(e.getLabel(), e);
       }
     }
     return new Pair<>(result, def);
-  }
-
-  static class Edge<P> {
-    private P label = null;
-    private boolean myDefault = false;
-
-    Edge(P l) {
-      this.label = l;
-    }
-    Edge() {this.myDefault = true; }
-
-    @Override
-    public String toString() {
-      if (myDefault) return "default"; else return label.toString();
-    }
   }
 }
