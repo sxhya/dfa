@@ -19,7 +19,7 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
       addEdge(copyEdge(e), fa.getDomain(e), fa.getCodomain(e));
     }
     setInitialState(fa.getInitialState());
-    addAcceptStates(fa.getAcceptStates());
+    for (State s : fa.getAcceptStates()) addAcceptState(s);
   }
 
   void setInitialState(State state) {
@@ -32,17 +32,24 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
 
   Set<State> getAcceptStates() {return acceptStates;}
 
-  void addAcceptStates(Set<State> acceptStates) {this.acceptStates.addAll(acceptStates);}
+  void addAcceptState(State acceptState) {this.acceptStates.add(acceptState);}
 
-  void addTransition(State initialState, Alphabet symbol, State resultingState) {super.addEdge(new Edge<>(symbol), initialState, resultingState);}
+  void addTransition(State initialState, Alphabet symbol, State resultingState) {addUniqueEdge(new Edge<>(symbol), initialState, resultingState);}
 
-  void addDefaultTransition(State initialState, State resultingState) {super.addEdge(new Edge<>(), initialState, resultingState);}
+  void addDefaultTransition(State initialState, State resultingState) {addUniqueEdge(new Edge<>(), initialState, resultingState);}
 
   Edge<Alphabet> copyEdge(Edge<Alphabet> edge) {
     Edge<Alphabet> result = new Edge<>();
     result.label = edge.label;
     result.myDefault = edge.myDefault;
     return result;
+  }
+
+  public void addUniqueEdge(Edge<Alphabet> e, State from, State to) {
+    for (FA.Edge<Alphabet> oe : getOutboundEdges(from))
+      if (e.equalLabels(oe) && getCodomain(oe).equals(to)) return;
+
+    addEdge(e, from, to);
   }
 
   boolean acceptedStateAttainable() {
@@ -109,5 +116,10 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
     boolean isDefault() {return myDefault;}
 
     void setDefault(boolean d) {myDefault = d;}
+
+    boolean equalLabels(Edge<P> e) {
+      if (myDefault) return e.isDefault();
+      return label.equals(e.getLabel());
+    }
   }
 }

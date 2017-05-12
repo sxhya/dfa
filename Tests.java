@@ -15,15 +15,11 @@ public class Tests {
         DFA dfap;
 
         dfa1.setInitialState("s1");
-        HashSet<String> acceptStates1 = new HashSet<>();
-        acceptStates1.add("t1");
-        dfa1.setAcceptStates(acceptStates1);
+        dfa1.addAcceptState("t1");
 
         dfa2.setInitialState("s2");
-        HashSet<String> acceptStates2 = new HashSet<>();
-        acceptStates2.add("t21");
-        acceptStates2.add("t22");
-        dfa2.setAcceptStates(acceptStates2);
+        dfa2.addAcceptState("t21");
+        dfa2.addAcceptState("t22");
 
         dfa1.addTransition("s1",0,"s1");
         dfa1.addTransition("s1",1,"t1");
