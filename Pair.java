@@ -23,4 +23,9 @@ public class Pair<A, B> {
     }
     return false;
   }
+
+  @Override
+  public String toString() {
+    return "(" + a.toString() + ", " + b.toString() + ")";
+  }
 }

@@ -1,7 +1,4 @@
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by user on 5/11/17.
@@ -80,4 +77,39 @@ public class DirectedGraph<V, E> {
   public Set<E> getEdges() {
     return boundaries.keySet();
   }
+
+  public List<List<V>> getOrderedVertices(V v) {
+    List<List<V>> list = new ArrayList<>();
+    Set<V> remainingVertices = getVertices();
+    Set<V> beenThere = new HashSet<V>();
+    do {
+      List<V> list2 = new ArrayList<V>();
+      list.add(list2);
+      list2.add(v);
+      beenThere.add(v);
+      getVerticesInt(v, list2, beenThere);
+      remainingVertices.removeAll(beenThere);
+      if (remainingVertices.isEmpty()) {
+        v = null;
+      } else {
+        v = remainingVertices.iterator().next();
+      }
+    } while (v != null);
+    return list;
+  }
+
+  private void getVerticesInt(V v, List<V> result, Set<V> beenThere) {
+    Set<V> vs = new HashSet<V>();
+    Set<V> newvs = new HashSet<V>();
+    for (E e : getOutboundEdges(v)) vs.add(getCodomain(e));
+    for (V vp : vs) if (!beenThere.contains(vp)) newvs.add(vp);
+
+    beenThere.addAll(newvs);
+    result.addAll(newvs);
+
+    for (V vp : newvs) {
+      getVerticesInt(vp, result, beenThere);
+    }
+  }
+
 }
