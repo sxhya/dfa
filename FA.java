@@ -90,6 +90,8 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
         for (Edge<Alphabet> e : getOutboundEdges(s)) {
           result +=  e.toString() + " -> " + getCodomain(e) + "; ";
         }
+
+
         result += "\n";
       }
 

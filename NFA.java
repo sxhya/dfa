@@ -180,7 +180,7 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     private boolean myEmpty = false;
 
     Edge(SpecialKind kind) {
-      super(null);
+      super();
       switch (kind) {
         case EPSILON: setDefault(false); myEmpty = true; break;
         case DEFAULT:

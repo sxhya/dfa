@@ -35,7 +35,8 @@ public class DirectedGraph<V, E> {
   }
 
   public Set<E> getOutboundEdges(V v) {
-    return outboundEdges.get(v);
+    Set<E> result = outboundEdges.get(v);
+    return result != null ? result : new HashSet<E>();
   }
 
   public Set<E> getInboundEdges(V v) {
