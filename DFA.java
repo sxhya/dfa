@@ -1,5 +1,3 @@
-import org.jetbrains.annotations.NotNull;
-
 import java.util.*;
 
 /**
@@ -97,7 +95,6 @@ public class DFA<State, Alphabet> extends FA<State, Alphabet> {
     return getCodomain(edge);
   }
 
-  @NotNull
   private static<X> Pair<Map<X, Edge<X>>, Edge<X>> getLabelMap(Set<FA.Edge<X>> edges) {
     HashMap<X, Edge<X>> result = new HashMap<>();
     Edge<X> def = null;
