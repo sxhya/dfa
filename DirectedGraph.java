@@ -61,6 +61,7 @@ public class DirectedGraph<V, E> {
   }
 
   public void removeEdge(E e) {
+    if (!boundaries.containsKey(e)) return;
     V from = getDomain(e);
     V to = getCodomain(e);
     Set<E> outbound = outboundEdges.get(from);

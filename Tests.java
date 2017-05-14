@@ -12,7 +12,7 @@ public class Tests {
     public void test1() {
         NFA<String, Integer> nfa1 = new NFA<>();
         NFA<String, Integer> nfa2 = new NFA<>();
-        NFA nfap;
+        NFA<Pair<String, String>, Integer> nfap;
 
         nfa1.setInitialState("s1");
         nfa1.addAcceptState("t1");
@@ -39,29 +39,36 @@ public class Tests {
 
         nfap = NFA.directProduct(nfa1, nfa2, NFA.ProductAnnotation.AND);
 
-        System.out.println(nfa1);
-        System.out.println(nfa2);
-        System.out.println(nfap);
-
-        //assert (!DFA.runDFA(nfa1, state));
+        assert (!nfa1.runNFA(state));
 
         state.clear(); state.add(1);
 
-        //assert (DFA.runDFA(nfa1, state));
-        //assert (!DFA.runDFA(dfap, state));
+        assert (nfa1.runNFA(state));
+        assert (!nfap.runNFA(state));
 
         state.clear(); state.add(0); state.add(1);
 
-        //assert (DFA.runDFA(dfap, state));
+        assert (nfap.runNFA(state));
     }
 
     @Test
     public void test2() {
-        NFA<Boolean, Character> a = NFA.simpleNFA('a');
-        System.out.println(a);
-        NFA<Boolean, Character> b = NFA.simpleNFA('b');
-        System.out.println(b);
-        System.out.println(NFA.concatNFA(a, b));
-        //System.out.println(NFA.concatNFA(NFA.concatNFA(nfa_a,nfa_b),nfa_c));
+        NFA<Integer, Character> a = NFA.singleSymbolNFA('a');
+        NFA<Integer, Character> b = NFA.singleSymbolNFA('b');
+        NFA<Pair<Integer, Integer>, Character> ak = NFA.kleeneClosure(a);
+        NFA<UnionState<Pair<Integer, Integer>,Integer>, Character> ak_b = NFA.concatNFA(ak, b);
+        assert (a.runNFA_('a'));
+        assert (!a.runNFA_('b'));
+        assert (!a.runNFA_('a', 'a'));
+        assert (!a.runNFA(new ArrayList<>()));
+        assert (ak.runNFA(new ArrayList<>()));
+        assert (ak.runNFA_('a'));
+        assert (ak.runNFA_('a', 'a'));
+        assert (ak_b.runNFA_('b'));
+        assert (ak_b.runNFA_('a', 'b'));
+        assert (ak_b.runNFA_('a', 'a', 'b'));
+        assert (!ak_b.runNFA_('a', 'b', 'b'));
+
+        System.out.println(ak_b);
     }
 }

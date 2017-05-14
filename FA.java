@@ -37,6 +37,7 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
   void addDefaultTransition(State initialState, State resultingState) {addUniqueEdge(new Edge<>(Edge.SpecialKind.DEFAULT), initialState, resultingState);}
 
   public void addUniqueEdge(Edge<Alphabet> e, State from, State to) {
+    if (e.isEpsilon() && from.equals(to)) return;
     for (FA.Edge<Alphabet> oe : getOutboundEdges(from))
       if (e.equalLabels(oe) && getCodomain(oe).equals(to)) return;
 
@@ -52,9 +53,9 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
 
   void purgeUnattainableStates() {
     List<List<State>> components = this.getOrderedVertices(initialState);
-    for (int i = 1; i<components.size()-1; i++) {
-      for (State v : components.get(i)) removeVertex(v);
-    }
+    for (int i = 1; i<components.size(); i++)
+      for (State v : components.get(i))
+        removeVertex(v);
   }
 
   @Override

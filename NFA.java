@@ -1,7 +1,4 @@
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by sxh on 12.05.17.
@@ -30,49 +27,40 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     Set<Edge<Alphabet>> epsilonEdges = result.getEpsilonEdges();
     if (epsilonEdges.isEmpty()) return result;
 
-    System.out.println("INPUT:");
-    System.out.println(result);
-
     //Stage 1: transitive closure of epsilon edges
     Map<State, Set<State>> hasEpsilonEdge = new HashMap<>();
     for (Edge<Alphabet> e : epsilonEdges) hasEpsilonEdge.computeIfAbsent(result.getDomain(e), k -> new HashSet<>()).add(result.getCodomain(e));
     boolean foundNew;
     do {
       foundNew = false;
+      Set<Pair<State, State>> appendLater = new HashSet<>();
       for (State s1 : hasEpsilonEdge.keySet())
         for (State s2 : hasEpsilonEdge.get(s1)) if (hasEpsilonEdge.get(s2) != null)
           for (State s3 : hasEpsilonEdge.get(s2)) if (!hasEpsilonEdge.get(s1).contains(s3)) {
             result.addEpsilonTransition(s1, s3);
-            hasEpsilonEdge.get(s1).add(s3);
+            appendLater.add(new Pair<>(s1,s3));
             foundNew = true;
           }
+      for (Pair<State, State> p : appendLater) hasEpsilonEdge.get(p.a).add(p.b);
     } while (foundNew);
 
-    System.out.println("After Stage 1:");
-    System.out.println(result);
+    for (State s : hasEpsilonEdge.keySet())
+      for (State s2 : hasEpsilonEdge.get(s))
+        result.addEpsilonTransition(s,s2);
 
     //Stage 2: saturate accept states
     epsilonEdges = result.getEpsilonEdges();
     for (Edge<Alphabet> e : epsilonEdges) if (result.getAcceptStates().contains(result.getCodomain(e))) result.addAcceptState(result.getDomain(e));
 
-    System.out.println("After Stage 2:");
-    System.out.println(result);
-
     //Stage 3: compose non-epsilon edges with epsilon edges
     for (Edge<Alphabet> e : epsilonEdges)
       for (FA.Edge<Alphabet> o : result.getOutboundEdges(result.getCodomain(e)))
-        result.addEdge(o.copy(), result.getDomain(e), result.getCodomain(o));
-
-    System.out.println("After Stage 3:");
-    System.out.println(result);
+        result.addUniqueEdge(o.copy(), result.getDomain(e), result.getCodomain(o));
 
     //Stage 4: purge all epsilon edges
     for (Edge<Alphabet> e : epsilonEdges) result.removeEdge(e);
 
     result.purgeUnattainableStates();
-
-    System.out.println("After all stages:");
-    System.out.println(result);
 
     return result;
   }
@@ -88,9 +76,6 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
   }
 
   void addEpsilonTransition(State initialState, State resultingState) {
-    // no epsilon loops are allowed
-    if (initialState.equals(resultingState)) return;
-
     addUniqueEdge(new FA.Edge<>(Edge.SpecialKind.EPSILON), initialState, resultingState);
   }
 
@@ -104,6 +89,35 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
   boolean containsEpsilonEdges() {
     return !getEpsilonEdges().isEmpty();
   }
+
+  private Set<State> getNewState(Set<State> initialState, Alphabet symbol) {
+    Set<FA.Edge<Alphabet>> edges = new HashSet<>();
+    for (State s : initialState) edges.addAll(this.getOutboundEdges(s));
+    Pair<Map<Alphabet, Set<FA.Edge<Alphabet>>>, Set<FA.Edge<Alphabet>>> outbound = NFA.getLabelMap(edges);
+    Set<FA.Edge<Alphabet>> edge = outbound.a.get(symbol);
+    if (edge == null) {
+      edge = outbound.b;
+    }
+    assert (edge != null && !edge.isEmpty());
+    HashSet<State> result = new HashSet<>();
+    for (FA.Edge<Alphabet> e : edge) result.add(this.getCodomain(e));
+    return result;
+  }
+
+  public boolean runNFA(Iterable<Alphabet> list) {
+    Set<State> s = new HashSet<>();
+    s.add(this.getInitialState());
+    for (Alphabet a : list) s = this.getNewState(s, a);
+    for (State st : getAcceptStates()) if (s.contains(st)) return true;
+    return false;
+  }
+
+  public boolean runNFA_(Alphabet... list) {
+    List<Alphabet> lst = new LinkedList<>();
+    Collections.addAll(lst, list);
+    return runNFA(lst);
+  }
+
 
   private static<X> Pair<Map<X, Set<FA.Edge<X>>>, Set<FA.Edge<X>>> getLabelMap(Set<FA.Edge<X>> edges) {
     HashMap<X, Set<FA.Edge<X>>> result = new HashMap<>();
@@ -183,56 +197,62 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     return result;
   }
 
-  public static<X> NFA<Boolean, X> emptyNFA() {
-    NFA<Boolean, X> result = new NFA<>();
-    result.addVertex(true);
-    result.addVertex(false);
-    result.addDefaultTransition(false, false);
-    result.addAcceptState(true);
-    result.setInitialState(false);
+  public static<X> NFA<Integer, X> emptyLanguageNFA() {
+    NFA<Integer, X> result = new NFA<>();
+    result.addVertex(0);
+    result.addVertex(1);
+    result.addVertex(-1);
+    result.addDefaultTransition(-1, -1);
+    result.addDefaultTransition(0, -1);
+    result.addDefaultTransition(1, -1);
+    result.addAcceptState(1);
+    result.setInitialState(0);
     return result;
   }
 
-  public static<X> NFA<Void, X> zeroNFA() {
-    NFA<Void, X> result = new NFA<>();
-    result.addVertex(null);
-    result.addAcceptState(null);
-    result.setInitialState(null);
+  public static<X> NFA<Integer, X> emptyWordNFA() {
+    NFA<Integer, X> result = new NFA<>();
+    result.addVertex(1);
+    result.addVertex(-1);
+    result.addAcceptState(1);
+    result.setInitialState(1);
+    result.addDefaultTransition(1, -1);
+    result.addDefaultTransition(-1, -1);
     return result;
   }
 
-  public static<X> NFA<Boolean, X> simpleNFA(X x) {
-    NFA<Boolean, X> result = emptyNFA();
-    result.addTransition(false, x, true);
+  public static<X> NFA<Integer, X> singleSymbolNFA(X x) {
+    NFA<Integer, X> result = emptyLanguageNFA();
+    result.addTransition(0, x, 1);
     return result;
   }
 
-  public static<X, S1, S2> NFA<UniteState<S1, S2>, X> uniteNFA(NFA<S1, X> nfa1, NFA<S2, X> nfa2) {
-    NFA<UniteState<S1, S2>, X> result = new NFA<>();
-    UniteState<S1, S2> start = UniteState.start();
-    UniteState<S1, S2> end = UniteState.stop();
-    nfa1.transform(result, UniteState::getX);
-    nfa2.transform(result, UniteState::getY);
-    result.addEpsilonTransition(start, UniteState.getX(nfa1.getInitialState()));
-    result.addEpsilonTransition(start, UniteState.getY(nfa2.getInitialState()));
+  public static<X, S1, S2> NFA<UnionState<S1, S2>, X> uniteNFA(NFA<S1, X> nfa1, NFA<S2, X> nfa2) {
+    NFA<UnionState<S1, S2>, X> result = new NFA<>();
+    UnionState<S1, S2> start = UnionState.begin();
+    UnionState<S1, S2> end = UnionState.end();
+    nfa1.transform(result, UnionState::getX);
+    nfa2.transform(result, UnionState::getY);
+    result.addEpsilonTransition(start, UnionState.getX(nfa1.getInitialState()));
+    result.addEpsilonTransition(start, UnionState.getY(nfa2.getInitialState()));
     result.setInitialState(start);
     result.addAcceptState(end);
-    for (S1 s : nfa1.getAcceptStates()) result.addEpsilonTransition(UniteState.getX(s), end);
-    for (S2 s : nfa2.getAcceptStates()) result.addEpsilonTransition(UniteState.getY(s), end);
+    for (S1 s : nfa1.getAcceptStates()) result.addEpsilonTransition(UnionState.getX(s), end);
+    for (S2 s : nfa2.getAcceptStates()) result.addEpsilonTransition(UnionState.getY(s), end);
     return result.getEpsilonClosure();
   }
 
-  public static<X, S1, S2> NFA<UniteState<S1, S2>, X> concatNFA(NFA<S1, X> nfa1, NFA<S2, X> nfa2) {
-    NFA<UniteState<S1, S2>, X> result = new NFA<>();
-    UniteState<S1, S2> start = UniteState.start();
-    UniteState<S1, S2> end = UniteState.stop();
+  public static<X, S1, S2> NFA<UnionState<S1, S2>, X> concatNFA(NFA<S1, X> nfa1, NFA<S2, X> nfa2) {
+    NFA<UnionState<S1, S2>, X> result = new NFA<>();
+    UnionState<S1, S2> start = UnionState.begin();
+    UnionState<S1, S2> end = UnionState.end();
     result.setInitialState(start);
-    nfa1.transform(result, UniteState::getX);
-    result.addEpsilonTransition(start, UniteState.getX(nfa1.getInitialState()));
-    nfa2.transform(result, UniteState::getY);
-    for (S1 s : nfa1.getAcceptStates()) result.addEpsilonTransition(UniteState.getX(s), UniteState.getY(nfa2.getInitialState()));
+    nfa1.transform(result, UnionState::getX);
+    result.addEpsilonTransition(start, UnionState.getX(nfa1.getInitialState()));
+    nfa2.transform(result, UnionState::getY);
+    for (S1 s : nfa1.getAcceptStates()) result.addEpsilonTransition(UnionState.getX(s), UnionState.getY(nfa2.getInitialState()));
     result.addAcceptState(end);
-    for (S2 s : nfa2.getAcceptStates()) result.addEpsilonTransition(UniteState.getY(s), end);
+    for (S2 s : nfa2.getAcceptStates()) result.addEpsilonTransition(UnionState.getY(s), end);
     return result.getEpsilonClosure();
   }
 
@@ -247,80 +267,4 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     result.addEpsilonTransition(new Pair<>(null, 2), new Pair<>(null, 0));
     return result.getEpsilonClosure();
   }
-
-  enum OperationState {INIT, WORKING, DONE}
-
-  static class UniteState<X, Y> {
-    X x = null;
-    Y y = null;
-    OperationState state = null;
-
-    UniteState(X x, Y y) {
-      this.x = x;
-      this.y = y;
-      state = OperationState.WORKING;
-    }
-
-    UniteState(OperationState state) {
-      this.state = state;
-    }
-
-    static<X1, Y1> UniteState getX(X1 x) {
-      return new UniteState<X1, Y1>(x, null);
-    }
-
-    static<X1, Y1> UniteState getY(Y1 y) {
-      return new UniteState<X1, Y1>(null, y);
-    }
-
-    static<X1, Y1> UniteState start() {
-      return new UniteState(OperationState.INIT);
-    }
-
-    static<X1, Y1> UniteState stop() {
-      return new UniteState(OperationState.DONE);
-    }
-
-    @Override
-    public int hashCode() {
-      int result = state.hashCode()*31;
-      if (x != null) result += x.hashCode();
-      result *= 31;
-      if (y != null) result += y.hashCode();
-      return result;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (o instanceof UniteState) {
-        UniteState us = (UniteState) o;
-        if (state.equals(us.state)) {
-          if (!state.equals(OperationState.WORKING)) return true;
-          if (x != null && x.equals(us.x)) {
-            assert (y == null && us.y == null);
-            return true;
-          }
-          if (y != null && y.equals(us.y)) {
-            assert (x == null && us.x == null);
-            return true;
-          }
-        }
-        return false;
-      }
-      return false;
-    }
-
-    @Override
-    public String toString() {
-      switch (state) {
-        case INIT: return "INIT";
-        case DONE: return "DONE";
-        default:
-      }
-      if (x != null) return "[L "+x.toString() + "]";
-      if (y != null) return "[R "+y.toString() + "]";
-      return "NULL";
-    }
-  }
-
 }
