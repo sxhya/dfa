@@ -1,3 +1,5 @@
+import com.sun.corba.se.impl.orbutil.graph.Graph;
+
 import java.util.*;
 
 /**
@@ -35,29 +37,34 @@ public class DirectedGraph<V, E> {
   }
 
   public Set<E> getOutboundEdges(V v) {
-    Set<E> result = outboundEdges.get(v);
-    return result != null ? result : new HashSet<E>();
+    Set<E> result = new HashSet<>();
+    if (outboundEdges.get(v) != null) result.addAll(outboundEdges.get(v));
+    return result;
   }
 
   public Set<E> getInboundEdges(V v) {
-    return inboundEdges.get(v);
+    Set<E> result = new HashSet<>();
+    if (inboundEdges.get(v) != null) result.addAll(inboundEdges.get(v));
+    return result;
   }
 
   public V getDomain(E e) {
     Pair<V, V> p =  boundaries.get(e);
-    return p != null ? p.a : null;
+    assert (p != null);
+    return p.a;
   }
 
   public V getCodomain(E e) {
     Pair<V, V> p =  boundaries.get(e);
-    return p != null ? p.b : null;
+    assert (p != null);
+    return p.b;
   }
 
   public void removeEdge(E e) {
     V from = getDomain(e);
     V to = getCodomain(e);
-    Set<E> outbound = getOutboundEdges(from);
-    Set<E> inbound = getInboundEdges(to);
+    Set<E> outbound = outboundEdges.get(from);
+    Set<E> inbound = inboundEdges.get(to);
     if (outbound != null) outbound.remove(e);
     if (inbound != null) inbound.remove(e);
     boundaries.remove(e);
@@ -72,7 +79,9 @@ public class DirectedGraph<V, E> {
   }
 
   public Set<V> getVertices() {
-    return vertices;
+    HashSet<V> result = new HashSet<>();
+    result.addAll(vertices);
+    return result;
   }
 
   public Set<E> getEdges() {
@@ -113,4 +122,12 @@ public class DirectedGraph<V, E> {
     }
   }
 
+  public<X> void transform(DirectedGraph<X, E> template, GraphTransformer<V, X> tr) {
+    for (V v : vertices) template.addVertex(tr.map(v));
+    for (E e : boundaries.keySet()) template.addEdge(e, tr.map(getDomain(e)), tr.map(getCodomain(e)));
+  }
+
+  public interface GraphTransformer<VV, X> {
+    X map (VV v);
+  }
 }

@@ -1,6 +1,4 @@
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by user on 5/12/17.
@@ -16,7 +14,7 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
   public FA(FA<State, Alphabet> fa) {
     for (State s : fa.getVertices()) addVertex(s);
     for (FA.Edge<Alphabet> e : fa.getEdges()) {
-      addEdge(copyEdge(e), fa.getDomain(e), fa.getCodomain(e));
+      addEdge(e.copy(), fa.getDomain(e), fa.getCodomain(e));
     }
     setInitialState(fa.getInitialState());
     for (State s : fa.getAcceptStates()) addAcceptState(s);
@@ -36,14 +34,7 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
 
   void addTransition(State initialState, Alphabet symbol, State resultingState) {addUniqueEdge(new Edge<>(symbol), initialState, resultingState);}
 
-  void addDefaultTransition(State initialState, State resultingState) {addUniqueEdge(new Edge<>(), initialState, resultingState);}
-
-  Edge<Alphabet> copyEdge(Edge<Alphabet> edge) {
-    Edge<Alphabet> result = new Edge<>();
-    result.label = edge.label;
-    result.myDefault = edge.myDefault;
-    return result;
-  }
+  void addDefaultTransition(State initialState, State resultingState) {addUniqueEdge(new Edge<>(Edge.SpecialKind.DEFAULT), initialState, resultingState);}
 
   public void addUniqueEdge(Edge<Alphabet> e, State from, State to) {
     for (FA.Edge<Alphabet> oe : getOutboundEdges(from))
@@ -87,10 +78,60 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
         if (getAcceptStates().contains(s)) label += " (✓)";
         while (label.length() <= len) label += " ";
         result += "| " + label + " | ";
-        for (Edge<Alphabet> e : getOutboundEdges(s)) {
-          result +=  e.toString() + " -> " + getCodomain(e) + "; ";
+
+        Set<Edge<Alphabet>> outboundEdges = getOutboundEdges(s);
+        List<Set<Edge<Alphabet>>> equalityClasses = new ArrayList<>();
+        while (!outboundEdges.isEmpty()) {
+          Edge<Alphabet> e = outboundEdges.iterator().next();
+          outboundEdges.remove(e);
+
+          boolean alreadyPresent = false;
+          for (Set<Edge<Alphabet>> c : equalityClasses)
+            if (c.iterator().next().equalLabels(e)) {
+              alreadyPresent = true;
+              c.add(e);
+              break;
+            }
+
+          if (!alreadyPresent) {
+            HashSet<Edge<Alphabet>> hs = new HashSet<>();
+            equalityClasses.add(hs);
+            hs.add(e);
+          }
         }
 
+        equalityClasses.sort(new Comparator<Set<Edge<Alphabet>>>() {
+          @Override
+          public int compare(Set<Edge<Alphabet>> edges, Set<Edge<Alphabet>> edges2) {
+            Edge<Alphabet> e1 = edges.iterator().next();
+            Edge<Alphabet> e2 = edges2.iterator().next();
+            if (e1.myDefault && !e2.myDefault) return 1;
+            if (e2.myDefault && !e1.myDefault) return -1;
+            if (e1.myEmpty && !e2.myEmpty) return 1;
+            if (e2.myEmpty && !e1.myEmpty) return -1;
+            if (e1.label instanceof Comparable && e2.label instanceof Comparable) {
+              Comparable l1 = (Comparable) e1.label;
+              Comparable l2 = (Comparable) e2.label;
+              return l1.compareTo(l2);
+            }
+            return 0;
+          }
+        });
+
+        Map<String, Set<Edge<Alphabet>>> m = new HashMap<>();
+
+        for (Set<Edge<Alphabet>> es : equalityClasses)        {
+          result +=  es.iterator().next().toString() + " -> ";
+          int cl = es.size() - 1;
+          if (cl > 0) result += "{";
+          for (Edge<Alphabet> e : es) {
+            result += getCodomain(e).toString();
+            if (cl > 0) result += ", ";
+            cl--;
+          }
+          if (es.size() > 1) result += "}";
+          result += "; ";
+        }
 
         result += "\n";
       }
@@ -102,26 +143,48 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
   }
 
   static class Edge<P> {
+    enum SpecialKind {EPSILON, DEFAULT};
     private P label = null;
     private boolean myDefault = false;
+    private boolean myEmpty = false;
 
     Edge(P l) {this.label = l;}
-    Edge() {this.myDefault = true;}
+
+    Edge(SpecialKind kind) {
+      switch (kind) {
+        case EPSILON: myEmpty = true; break;
+        case DEFAULT:
+        default: myDefault = true; break;
+      }
+    }
 
     @Override
     public String toString() {
-      if (myDefault) return "default"; else return label.toString();
+      if (myDefault) return "default"; else
+        if (myEmpty) return "ε"; else return label.toString();
     }
 
     P getLabel() {return label;}
 
     boolean isDefault() {return myDefault;}
 
+    boolean isEpsilon() {return myEmpty;}
+
     void setDefault(boolean d) {myDefault = d;}
+
+    void setEpsilon(boolean d) {myEmpty = d;}
 
     boolean equalLabels(Edge<P> e) {
       if (myDefault) return e.isDefault();
+      if (myEmpty) return e.isEpsilon();
       return label.equals(e.getLabel());
+    }
+
+    Edge<P> copy() {
+      Edge<P> result = new Edge<P>(label);
+      result.myDefault = myDefault;
+      result.myEmpty = myEmpty;
+      return result;
     }
   }
 }

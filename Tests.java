@@ -23,12 +23,14 @@ public class Tests {
 
         nfa1.addTransition("s1",0,"s1");
         nfa1.addTransition("s1",1,"t1");
-        nfa1.addDefaultTransition("t1", "t1");
+        nfa1.addTransition("t1",0,"s1");
+        nfa1.addTransition("t1",1,"t1");
 
         nfa2.addTransition("s2",1,"s2");
         nfa2.addTransition("s2",0,"q2");
         nfa2.addTransition("q2",0,"q2");
         nfa2.addTransition("q2",1,"t21");
+        nfa2.addTransition("q2",1,"t22");
         nfa2.addDefaultTransition("t21", "t21");
         nfa2.addDefaultTransition("t22", "t22");
 
@@ -51,5 +53,15 @@ public class Tests {
         state.clear(); state.add(0); state.add(1);
 
         //assert (DFA.runDFA(dfap, state));
+    }
+
+    @Test
+    public void test2() {
+        NFA<Boolean, Character> a = NFA.simpleNFA('a');
+        System.out.println(a);
+        NFA<Boolean, Character> b = NFA.simpleNFA('b');
+        System.out.println(b);
+        System.out.println(NFA.concatNFA(a, b));
+        //System.out.println(NFA.concatNFA(NFA.concatNFA(nfa_a,nfa_b),nfa_c));
     }
 }
