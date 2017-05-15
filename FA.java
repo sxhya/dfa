@@ -58,9 +58,33 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
         removeVertex(v);
   }
 
+  void identifyDevilVertices(){
+    FA.Edge<Alphabet> e;
+    Map<State, FA.Edge<Alphabet>> devilVertices = new HashMap<>();
+    for (State v : getVertices()) if (getOutboundEdges(v).size() == 1) {
+      e = getOutboundEdges(v).iterator().next();
+      if (e.myDefault && getCodomain(e).equals(v)) devilVertices.put(v, e);
+    }
+
+    if (devilVertices.size()>1) {
+      Iterator<State> vs = devilVertices.keySet().iterator();
+      State v = vs.next();
+      while (vs.hasNext()) {
+        State v2 = vs.next();
+        removeEdge(devilVertices.get(v2));
+        for (FA.Edge<Alphabet> e2 : getInboundEdges(v2)) {
+          State v3 = getDomain(e2);
+          removeEdge(e2);
+          addUniqueEdge(e2, v3, v);
+        }
+        removeVertex(v2);
+      }
+    }
+  }
+
   @Override
   public String toString() {
-    String result = "";
+    StringBuilder result = new StringBuilder();
     List<List<State>> components = getOrderedVertices(getInitialState());
     for (int i = 0; i < components.size(); i++) {
       int len = 0;
@@ -73,12 +97,12 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
       }
 
       for (State s : component) {
-        String label = "";
-        if (s.equals(getInitialState())) label = "(>) ";
-        label += s.toString();
-        if (getAcceptStates().contains(s)) label += " (✓)";
-        while (label.length() <= len) label += " ";
-        result += "| " + label + " | ";
+        StringBuilder label = new StringBuilder();
+        if (s.equals(getInitialState())) label = new StringBuilder("(>) ");
+        label.append(s.toString());
+        if (getAcceptStates().contains(s)) label.append(" (✓)");
+        while (label.length() <= len) label.append(" ");
+        result.append("| ").append(label).append(" | ");
 
         Set<Edge<Alphabet>> outboundEdges = getOutboundEdges(s);
         List<Set<Edge<Alphabet>>> equalityClasses = new ArrayList<>();
@@ -122,25 +146,25 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
         Map<String, Set<Edge<Alphabet>>> m = new HashMap<>();
 
         for (Set<Edge<Alphabet>> es : equalityClasses)        {
-          result +=  es.iterator().next().toString() + " -> ";
+          result.append(es.iterator().next().toString()).append(" -> ");
           int cl = es.size() - 1;
-          if (cl > 0) result += "{";
+          if (cl > 0) result.append("{");
           for (Edge<Alphabet> e : es) {
-            result += getCodomain(e).toString();
-            if (cl > 0) result += ", ";
+            result.append(getCodomain(e).toString());
+            if (cl > 0) result.append(", ");
             cl--;
           }
-          if (es.size() > 1) result += "}";
-          result += "; ";
+          if (es.size() > 1) result.append("}");
+          result.append("; ");
         }
 
-        result += "\n";
+        result.append("\n");
       }
 
-      if (!isLast) result += "=== next component === \n";
+      if (!isLast) result.append("=== next component === \n");
     }
 
-    return result;
+    return result.toString();
   }
 
   static class Edge<P> {

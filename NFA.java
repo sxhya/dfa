@@ -61,6 +61,7 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     for (Edge<Alphabet> e : epsilonEdges) result.removeEdge(e);
 
     result.purgeUnattainableStates();
+    result.identifyDevilVertices();
 
     return result;
   }
@@ -117,7 +118,6 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     Collections.addAll(lst, list);
     return runNFA(lst);
   }
-
 
   private static<X> Pair<Map<X, Set<FA.Edge<X>>>, Set<FA.Edge<X>>> getLabelMap(Set<FA.Edge<X>> edges) {
     HashMap<X, Set<FA.Edge<X>>> result = new HashMap<>();
@@ -224,6 +224,47 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
   public static<X> NFA<Integer, X> singleSymbolNFA(X x) {
     NFA<Integer, X> result = emptyLanguageNFA();
     result.addTransition(0, x, 1);
+    return result;
+  }
+
+  public static<X> NFA<Integer, X> singleSymbolNFA_(X... xs) {
+    NFA<Integer, X> result = new NFA<>();
+
+    result.addVertex(0);
+    result.addVertex(1);
+    result.addVertex(-1);
+    X x0 = xs[0];
+    result.addTransition(0, x0, 1);
+    result.addTransition(1, x0, -1);
+    result.addTransition(-1, x0, -1);
+    for (int i = 1; i < xs. length; i++) {
+      x0 = xs[i];
+      result.addTransition(-1, x0, -1);
+      result.addTransition(0, x0, -1);
+      result.addTransition(1, x0, -1);
+    }
+
+    result.addAcceptState(1);
+    result.setInitialState(0);
+    return result;
+  }
+
+  public static<X> NFA<Integer, X> anySymbolNFA() {
+    NFA<Integer, X> result = new NFA<>();
+    result.addDefaultTransition(0, 1);
+    result.addDefaultTransition(1, 2);
+    result.addDefaultTransition(2, 2);
+    result.setInitialState(0);
+    result.addAcceptState(1);
+    return result;
+  }
+
+  public static<X> NFA<Integer, X> anyWordNFA() {
+    NFA<Integer, X> result = new NFA<>();
+    result.addVertex(0);
+    result.addDefaultTransition(0, 0);
+    result.setInitialState(0);
+    result.addAcceptState(0);
     return result;
   }
 
