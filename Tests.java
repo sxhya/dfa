@@ -54,9 +54,7 @@ public class Tests {
     @Test
     public void test2() {
         NFA<Integer, Character> a = NFA.singleSymbolNFA('a');
-        //NFA<Integer, Character> a_pure = NFA.singleSymbolNFA_('a','b');
         NFA<Integer, Character> b = NFA.singleSymbolNFA('b');
-        //NFA<Integer, Character> b_pure = NFA.singleSymbolNFA_('b','a');
         NFA<Integer, Character> c = NFA.singleSymbolNFA('c');
         NFA<Pair<Integer, Integer>, Character> ak = NFA.kleeneClosure(a);
         NFA<UnionState<Pair<Integer, Integer>,Integer>, Character> ak_b = NFA.concatNFA(ak, b);
@@ -109,8 +107,6 @@ public class Tests {
 
         NFA xa = NFA.concatNFA(NFA.anyWordNFA(), a);
 
-        System.out.println(xa);
-
         NFA axa = NFA.concatNFA(a, NFA.concatNFA(NFA.anyWordNFA(), a));
 
         assert (!axa.runNFA(new ArrayList()));
@@ -122,7 +118,7 @@ public class Tests {
         assert (axa.runNFA_('a', 'b', 'c', 'a'));
         assert (axa.runNFA_('a', 'b', 'a', 'c', 'a'));
 
-        /* NFA x1 = NFA.directProduct(axa, abck2, FA.ProductAnnotation.AND);
+        NFA x1 = NFA.directProduct(axa, abck2, FA.ProductAnnotation.AND);
         x1.purgeUnattainableStates();
 
         assert (!x1.runNFA_('a'));
@@ -136,13 +132,9 @@ public class Tests {
         assert (!x1.runNFA_('a', 'b', 'a', 'c'));
         assert (!x1.runNFA_('a', 'b', 'a', 'c', 'a', 'b'));
         assert (!x1.runNFA_('a', 'b', 'c'));
+        assert (x1.runNFA_('a', 'b', 'a', 'c', 'a'));
+        assert (x1.runNFA_('a', 'b', 'a', 'a', 'c', 'a'));
 
-        //assert (x1.runNFA_('a', 'b', 'a', 'c', 'a'));
-        assert (axa.runNFA_('a', 'b', 'a', 'c', 'a'));
-        assert (abck2.runNFA_('a', 'b', 'a', 'c', 'a'));
-
-        assert (x1.runNFA_('a', 'b', 'a', 'a', 'c', 'a')); */
-
-        //System.out.println(x1);
+        System.out.println(x1);
     }
 }

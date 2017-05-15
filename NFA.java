@@ -52,10 +52,29 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     epsilonEdges = result.getEpsilonEdges();
     for (Edge<Alphabet> e : epsilonEdges) if (result.getAcceptStates().contains(result.getCodomain(e))) result.addAcceptState(result.getDomain(e));
 
+    Map<State, Set<Alphabet>> nonDefaultSymbols = new HashMap<State, Set<Alphabet>>();
+    Set<State> hasDefaultOutboundEdge = new HashSet<State>();
+
+    for (State v : result.getVertices())
+      for (FA.Edge<Alphabet> e : getOutboundEdges(v))
+        if (e.isDefault()) hasDefaultOutboundEdge.add(v); else
+          if (!e.isEpsilon()) nonDefaultSymbols.computeIfAbsent(v, k -> new HashSet<>()).add(e.getLabel());
+
     //Stage 3: compose non-epsilon edges with epsilon edges
     for (Edge<Alphabet> e : epsilonEdges)
-      for (FA.Edge<Alphabet> o : result.getOutboundEdges(result.getCodomain(e)))
-        result.addUniqueEdge(o.copy(), result.getDomain(e), result.getCodomain(o));
+      for (FA.Edge<Alphabet> o : result.getOutboundEdges(result.getCodomain(e))) {
+        State s = result.getDomain(e);
+        Set<Alphabet> nonDefault = nonDefaultSymbols.get(s);
+        boolean hasDefault = hasDefaultOutboundEdge.contains(s);
+        if (!o.isDefault() && !o.isEpsilon() && hasDefault && (nonDefault == null || !nonDefault.contains(o.getLabel()))) {
+          for (FA.Edge<Alphabet> ex : result.getOutboundEdges(s))
+            if (ex.isDefault()) result.addUniqueEdge(o.copy(), s, result.getCodomain(ex));
+        }
+
+        result.addUniqueEdge(o.copy(), s, result.getCodomain(o));
+      }
+        // this implementation is erroneous
+
 
     //Stage 4: purge all epsilon edges
     for (Edge<Alphabet> e : epsilonEdges) result.removeEdge(e);
