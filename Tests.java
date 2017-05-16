@@ -82,6 +82,7 @@ public class Tests {
         System.out.println("NFA for .{1,5}\n" + r15);
         NFA ab5 = NFA.directProduct(abk, r15, FA.ProductAnnotation.AND);
         System.out.println("NFA for .{1,5} && (ab)*\n" + ab5);
+        System.out.println("NFA for (.)*\n" + NFA.kleeneClosure(NFA.anySymbolNFA()));
 
         assert (a.runNFA_('a'));
         assert (!a.runNFA_('b'));

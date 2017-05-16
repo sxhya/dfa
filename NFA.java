@@ -5,22 +5,11 @@ import java.util.*;
  */
 public class NFA<State, Alphabet> extends FA<State, Alphabet> {
 
-  NFA(DFA<State, Alphabet> dfa) {
-    super(dfa);
-  }
-
   NFA(NFA<State, Alphabet> nfa) {
     super(nfa);
   }
 
   NFA() {super();}
-
-  DFA<State, Alphabet> convertToDFA() {
-    DFA<State, Alphabet> result = new DFA<>();
-    NFA<State, Alphabet> closed = getEpsilonClosure();
-    // some code:
-    return result;
-  }
 
   NFA<State, Alphabet> getEpsilonClosure() {
     NFA<State, Alphabet> result = new NFA<>(this);
@@ -79,7 +68,6 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     //Stage 4: purge all epsilon edges
     for (Edge<Alphabet> e : epsilonEdges) result.removeEdge(e);
 
-    result.purgeUnattainableStates();
     result.simplify();
 
     return result;

@@ -111,6 +111,9 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
     int vC;
     do {
       vC = getVertices().size();
+
+      purgeUnattainableStates();
+
       FA.Edge<Alphabet> e;
       Set<State> devilVertices = new HashSet<>();
       for (State v : getVertices()) if (allGoingTo(v, v) && !acceptStates.contains(v)) devilVertices.add(v);
