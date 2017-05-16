@@ -78,6 +78,10 @@ public class Tests {
         System.out.println("NFA for ([a|a[b|c]])*\n" + abck2);
         NFA x1 = NFA.directProduct(axa, abck2, FA.ProductAnnotation.AND);
         System.out.println("NFA for ([a|a[b|c]])* && a(.)*a\n" + x1);
+        NFA r15 = NFA.counter(1, 5);
+        System.out.println("NFA for .{1,5}\n" + r15);
+        NFA ab5 = NFA.directProduct(abk, r15, FA.ProductAnnotation.AND);
+        System.out.println("NFA for .{1,5} && (ab)*\n" + ab5);
 
         assert (a.runNFA_('a'));
         assert (!a.runNFA_('b'));
@@ -139,6 +143,5 @@ public class Tests {
         assert (!x1.runNFA_('a', 'b', 'c'));
         assert (x1.runNFA_('a', 'b', 'a', 'c', 'a'));
         assert (x1.runNFA_('a', 'b', 'a', 'a', 'c', 'a'));
-
     }
 }

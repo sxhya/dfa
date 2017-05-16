@@ -249,28 +249,6 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     return result;
   }
 
-  public static<X> NFA<Integer, X> singleSymbolNFA_(X... xs) {
-    NFA<Integer, X> result = new NFA<>();
-
-    result.addVertex(0);
-    result.addVertex(1);
-    result.addVertex(-1);
-    X x0 = xs[0];
-    result.addTransition(0, x0, 1);
-    result.addTransition(1, x0, -1);
-    result.addTransition(-1, x0, -1);
-    for (int i = 1; i < xs. length; i++) {
-      x0 = xs[i];
-      result.addTransition(-1, x0, -1);
-      result.addTransition(0, x0, -1);
-      result.addTransition(1, x0, -1);
-    }
-
-    result.addAcceptState(1);
-    result.setInitialState(0);
-    return result;
-  }
-
   public static<X> NFA<Integer, X> anySymbolNFA() {
     NFA<Integer, X> result = new NFA<>();
     result.addDefaultTransition(0, 1);
@@ -329,5 +307,21 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     result.addEpsilonTransition(new Pair<>(null, 0), new Pair<>(null, 2));
     result.addEpsilonTransition(new Pair<>(null, 2), new Pair<>(null, 0));
     return result.getEpsilonClosure();
+  }
+
+  public static<X> NFA<Integer, X> counter(int min, int max) {
+    NFA<Integer, X> result = new NFA<>();
+    assert (min>=1 && max >= min);
+    result.addVertex(0);
+    result.setInitialState(0);
+    for (int i=1; i< max; i++) {
+      result.addVertex(i);
+      result.addDefaultTransition(i-1, i);
+      if (i >= min) result.addAcceptState(i);
+    }
+    result.addVertex(-1);
+    result.addDefaultTransition(max-1, -1);
+    result.addDefaultTransition(-1, -1);
+    return result;
   }
 }

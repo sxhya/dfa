@@ -60,14 +60,14 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
   }
 
   boolean acceptedStateAttainable() {
-    List<List<State>> components = this.getOrderedVertices(initialState);
+    List<List<State>> components = this.getOrderedVertices(initialState, false);
     if (components.isEmpty()) return false;
     for (State v : components.get(0)) if (acceptStates.contains(v)) return true;
     return false;
   }
 
   void purgeUnattainableStates() {
-    List<List<State>> components = this.getOrderedVertices(initialState);
+    List<List<State>> components = this.getOrderedVertices(initialState, false);
     for (int i = 1; i < components.size(); i++)
       for (State v : components.get(i))
         removeVertex(v);
@@ -82,6 +82,29 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
         break;
       }
     return result;
+  }
+
+  private void glueIfDeadEnd(State s) {
+    List<State> result = this.getOrderedVertices(s, true).iterator().next();
+    boolean accept = false;
+    for (State as : acceptStates) if (result.contains(as)) return;
+    if (result.size() > 1) {
+      Iterator<State> sx = result.iterator();
+      State s1 = sx.next();
+      while (sx.hasNext()) {
+        State s2 = sx.next();
+        State s3;
+        for (FA.Edge<Alphabet> e : getInboundEdges(s2)) if (!result.contains(s3 = getDomain(e))) {
+          removeEdge(e);
+          addUniqueEdge(e.copy(), s3, s1);
+        }
+      }
+      sx = result.iterator();
+      sx.next();
+      while (sx.hasNext()) {removeVertex(sx.next());}
+      for (FA.Edge<Alphabet> e : getOutboundEdges(s1)) removeEdge(e);
+      addDefaultTransition(s1, s1);
+    }
   }
 
   void simplify() { //some heuristic nfa simplification
@@ -106,21 +129,7 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
           removeVertex(v2);
         }
 
-        boolean flag;
-        do {
-          flag = false;
-          for (State s : getVertices())
-            if (!s.equals(devil) && !acceptStates.contains(s)) {
-              if (allGoingTo(s, devil)) {
-                flag = true;
-                for (FA.Edge<Alphabet> e2 : getInboundEdges(s)) {
-                  addUniqueEdge(e2.copy(), getDomain(e2), devil);
-                  removeEdge(e2);
-                }
-                removeVertex(s);
-              }
-            }
-        } while (flag);
+        for (State s : getVertices()) glueIfDeadEnd(s);
 
         for (FA.Edge<Alphabet> i : getInboundEdges(devil)) {
           boolean hasOtherEdges = false;
@@ -174,7 +183,7 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
   @Override
   public String toString() {
     StringBuilder result = new StringBuilder();
-    List<List<State>> components = getOrderedVertices(getInitialState());
+    List<List<State>> components = getOrderedVertices(getInitialState(), false);
     for (int i = 0; i < components.size(); i++) {
       int len = 0;
       boolean isLast = i == components.size() - 1;
@@ -183,8 +192,9 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
       int counter = 0;
       for (State s : component) {
         indices.put(s, counter++);
-        int cL = s.toString().length();
-        if (getAcceptStates().contains(s) || getInitialState().equals(s)) cL += 3;
+        int cL = String.valueOf(counter - 1).length();
+        if (getInitialState().equals(s)) cL += 4;
+        if (getAcceptStates().contains(s)) cL += 3;
         if (cL > len) len = cL;
       }
 

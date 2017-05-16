@@ -89,7 +89,7 @@ public class DirectedGraph<V, E> {
     return boundaries.keySet();
   }
 
-  public List<List<V>> getOrderedVertices(V v) {
+  protected List<List<V>> getOrderedVertices(V v, boolean stop) {
     List<List<V>> list = new ArrayList<>();
     Set<V> remainingVertices = getVertices();
     Set<V> beenThere = new HashSet<V>();
@@ -100,7 +100,7 @@ public class DirectedGraph<V, E> {
       beenThere.add(v);
       getVerticesInt(v, list2, beenThere);
       remainingVertices.removeAll(beenThere);
-      if (remainingVertices.isEmpty()) {
+      if (remainingVertices.isEmpty() || stop) {
         v = null;
       } else {
         v = remainingVertices.iterator().next();
