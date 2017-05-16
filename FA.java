@@ -4,12 +4,15 @@ import java.util.*;
  * Created by user on 5/12/17.
  */
 public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<Alphabet>> {
-  public enum ProductAnnotation {OR, AND, MINUS};
+  public enum ProductAnnotation {OR, AND, MINUS}
+
+  ;
 
   private State initialState;
   private Set<State> acceptStates = new HashSet<>();
 
-  public FA() {}
+  public FA() {
+  }
 
   public FA(FA<State, Alphabet> fa) {
     for (State s : fa.getVertices()) addVertex(s);
@@ -24,17 +27,29 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
     initialState = state;
   }
 
-  State getInitialState() {return initialState;}
+  State getInitialState() {
+    return initialState;
+  }
 
-  void setAcceptStates(Set<State> acceptStates) {this.acceptStates = acceptStates;}
+  void setAcceptStates(Set<State> acceptStates) {
+    this.acceptStates = acceptStates;
+  }
 
-  Set<State> getAcceptStates() {return acceptStates;}
+  Set<State> getAcceptStates() {
+    return acceptStates;
+  }
 
-  void addAcceptState(State acceptState) {this.acceptStates.add(acceptState);}
+  void addAcceptState(State acceptState) {
+    this.acceptStates.add(acceptState);
+  }
 
-  void addTransition(State initialState, Alphabet symbol, State resultingState) {addUniqueEdge(new Edge<>(symbol), initialState, resultingState);}
+  void addTransition(State initialState, Alphabet symbol, State resultingState) {
+    addUniqueEdge(new Edge<>(symbol), initialState, resultingState);
+  }
 
-  void addDefaultTransition(State initialState, State resultingState) {addUniqueEdge(new Edge<>(Edge.SpecialKind.DEFAULT), initialState, resultingState);}
+  void addDefaultTransition(State initialState, State resultingState) {
+    addUniqueEdge(new Edge<>(Edge.SpecialKind.DEFAULT), initialState, resultingState);
+  }
 
   public void addUniqueEdge(Edge<Alphabet> e, State from, State to) {
     if (e.isEpsilon() && from.equals(to)) return;
@@ -53,33 +68,107 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
 
   void purgeUnattainableStates() {
     List<List<State>> components = this.getOrderedVertices(initialState);
-    for (int i = 1; i<components.size(); i++)
+    for (int i = 1; i < components.size(); i++)
       for (State v : components.get(i))
         removeVertex(v);
   }
 
-  void identifyDevilVertices(){
-    FA.Edge<Alphabet> e;
-    Map<State, FA.Edge<Alphabet>> devilVertices = new HashMap<>();
-    for (State v : getVertices()) if (getOutboundEdges(v).size() == 1) {
-      e = getOutboundEdges(v).iterator().next();
-      if (e.myDefault && getCodomain(e).equals(v)) devilVertices.put(v, e);
-    }
-
-    if (devilVertices.size()>1) {
-      Iterator<State> vs = devilVertices.keySet().iterator();
-      State v = vs.next();
-      while (vs.hasNext()) {
-        State v2 = vs.next();
-        removeEdge(devilVertices.get(v2));
-        for (FA.Edge<Alphabet> e2 : getInboundEdges(v2)) {
-          State v3 = getDomain(e2);
-          removeEdge(e2);
-          addUniqueEdge(e2, v3, v);
-        }
-        removeVertex(v2);
+  boolean allGoingTo(State s1, State s2) {
+    Set<FA.Edge<Alphabet>> es = getOutboundEdges(s1);
+    boolean result = es.size() > 0;
+    for (FA.Edge<Alphabet> e2 : es)
+      if (!getCodomain(e2).equals(s2)) {
+        result = false;
+        break;
       }
-    }
+    return result;
+  }
+
+  void simplify() { //some heuristic nfa simplification
+    int vC;
+    do {
+      vC = getVertices().size();
+      FA.Edge<Alphabet> e;
+      Set<State> devilVertices = new HashSet<>();
+      for (State v : getVertices()) if (allGoingTo(v, v) && !acceptStates.contains(v)) devilVertices.add(v);
+
+      if (devilVertices.size() >= 1) {
+        Iterator<State> vs = devilVertices.iterator();
+        State devil = vs.next();
+        while (vs.hasNext()) {
+          State v2 = vs.next();
+          for (FA.Edge<Alphabet> e2 : getOutboundEdges(v2)) removeEdge(e2);
+          for (FA.Edge<Alphabet> e2 : getInboundEdges(v2)) {
+            State v3 = getDomain(e2);
+            removeEdge(e2);
+            addUniqueEdge(e2, v3, devil);
+          }
+          removeVertex(v2);
+        }
+
+        boolean flag;
+        do {
+          flag = false;
+          for (State s : getVertices())
+            if (!s.equals(devil) && !acceptStates.contains(s)) {
+              if (allGoingTo(s, devil)) {
+                flag = true;
+                for (FA.Edge<Alphabet> e2 : getInboundEdges(s)) {
+                  addUniqueEdge(e2.copy(), getDomain(e2), devil);
+                  removeEdge(e2);
+                }
+                removeVertex(s);
+              }
+            }
+        } while (flag);
+
+        for (FA.Edge<Alphabet> i : getInboundEdges(devil)) {
+          boolean hasOtherEdges = false;
+          for (FA.Edge<Alphabet> e2 : getOutboundEdges(getDomain(i)))
+            if (e2.equalLabels(i) && !e2.equals(i)) {
+              hasOtherEdges = true;
+              break;
+            }
+          if (hasOtherEdges) removeEdge(i);
+        }
+      }
+
+      Map<Pair<Pair<Map<Alphabet, Set<State>>, Set<State>>, Boolean>, Set<State>> glueData = new HashMap<>();
+
+      for (State s : getVertices()) {
+        Set<State> defaultCodomains = new HashSet<>();
+        Map<Alphabet, Set<State>> labelEdges = new HashMap<>();
+        for (FA.Edge<Alphabet> e2 : getOutboundEdges(s))
+          if (e2.isDefault()) defaultCodomains.add(getCodomain(e2)); else if (!e2.isEpsilon())
+            labelEdges.computeIfAbsent(e2.getLabel(), k -> new HashSet<>()).add(getCodomain(e2));
+        Pair<Pair<Map<Alphabet, Set<State>>, Set<State>>, Boolean> key = new Pair<>(new Pair<>(labelEdges, defaultCodomains), acceptStates.contains(s));
+        glueData.computeIfAbsent(key, k -> new HashSet<State>()).add(s);
+      }
+
+      for (Object key : glueData.keySet()) {
+        Iterator<State> it = glueData.get(key).iterator();
+        State s1 = it.next();
+        while (it.hasNext()) {
+          State s2 = it.next();
+          if (initialState.equals(s2)) setInitialState(s1);
+
+          for (FA.Edge<Alphabet> e2 : getInboundEdges(s2)) {
+            State s3 = getDomain(e2);
+            removeEdge(e2);
+            addUniqueEdge(e2.copy(), s3, s1);
+          }
+
+          for (FA.Edge<Alphabet> e2 : getOutboundEdges(s2)) {
+            State s3 = getCodomain(e2);
+            removeEdge(e2);
+            addUniqueEdge(e2.copy(), s1, s3);
+          }
+
+          removeVertex(s2);
+        }
+      }
+
+    } while (getVertices().size() < vC);
   }
 
   @Override
@@ -90,7 +179,10 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
       int len = 0;
       boolean isLast = i == components.size() - 1;
       List<State> component = components.get(i);
+      Map<State, Integer> indices = new HashMap<State, Integer>();
+      int counter = 0;
       for (State s : component) {
+        indices.put(s, counter++);
         int cL = s.toString().length();
         if (getAcceptStates().contains(s) || getInitialState().equals(s)) cL += 3;
         if (cL > len) len = cL;
@@ -99,7 +191,8 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
       for (State s : component) {
         StringBuilder label = new StringBuilder();
         if (s.equals(getInitialState())) label = new StringBuilder("(>) ");
-        label.append(s.toString());
+        int index = indices.get(s);
+        label.append(String.valueOf(index));
         if (getAcceptStates().contains(s)) label.append(" (✓)");
         while (label.length() <= len) label.append(" ");
         result.append("| ").append(label).append(" | ");
@@ -145,12 +238,13 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
 
         Map<String, Set<Edge<Alphabet>>> m = new HashMap<>();
 
-        for (Set<Edge<Alphabet>> es : equalityClasses)        {
+        for (Set<Edge<Alphabet>> es : equalityClasses) {
           result.append(es.iterator().next().toString()).append(" -> ");
           int cl = es.size() - 1;
           if (cl > 0) result.append("{");
           for (Edge<Alphabet> e : es) {
-            result.append(getCodomain(e).toString());
+            index = indices.get(getCodomain(e));
+            result.append(String.valueOf(index));
             if (cl > 0) result.append(", ");
             cl--;
           }
@@ -168,36 +262,55 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
   }
 
   static class Edge<P> {
-    enum SpecialKind {EPSILON, DEFAULT};
+    enum SpecialKind {EPSILON, DEFAULT}
+
+    ;
     private P label = null;
     private boolean myDefault = false;
     private boolean myEmpty = false;
 
-    Edge(P l) {this.label = l;}
+    Edge(P l) {
+      this.label = l;
+    }
 
     Edge(SpecialKind kind) {
       switch (kind) {
-        case EPSILON: myEmpty = true; break;
+        case EPSILON:
+          myEmpty = true;
+          break;
         case DEFAULT:
-        default: myDefault = true; break;
+        default:
+          myDefault = true;
+          break;
       }
     }
 
     @Override
     public String toString() {
-      if (myDefault) return "default"; else
-        if (myEmpty) return "ε"; else return label.toString();
+      if (myDefault) return "default";
+      else if (myEmpty) return "ε";
+      else return label.toString();
     }
 
-    P getLabel() {return label;}
+    P getLabel() {
+      return label;
+    }
 
-    boolean isDefault() {return myDefault;}
+    boolean isDefault() {
+      return myDefault;
+    }
 
-    boolean isEpsilon() {return myEmpty;}
+    boolean isEpsilon() {
+      return myEmpty;
+    }
 
-    void setDefault(boolean d) {myDefault = d;}
+    void setDefault(boolean d) {
+      myDefault = d;
+    }
 
-    void setEpsilon(boolean d) {myEmpty = d;}
+    void setEpsilon(boolean d) {
+      myEmpty = d;
+    }
 
     boolean equalLabels(Edge<P> e) {
       if (myDefault) return e.isDefault();

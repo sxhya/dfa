@@ -1,7 +1,6 @@
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -54,10 +53,32 @@ public class Tests {
     @Test
     public void test2() {
         NFA<Integer, Character> a = NFA.singleSymbolNFA('a');
+
+        System.out.println();
         NFA<Integer, Character> b = NFA.singleSymbolNFA('b');
         NFA<Integer, Character> c = NFA.singleSymbolNFA('c');
+        System.out.println("NFA for a\n" + a);
         NFA<Pair<Integer, Integer>, Character> ak = NFA.kleeneClosure(a);
+        System.out.println("NFA for (a)*\n" + ak);
         NFA<UnionState<Pair<Integer, Integer>,Integer>, Character> ak_b = NFA.concatNFA(ak, b);
+        System.out.println("NFA for (a)*b\n" + ak_b);
+        NFA ab = NFA.concatNFA(a, b);
+        System.out.println("NFA for ab\n" + ab);
+        NFA abk = NFA.kleeneClosure(ab);
+        System.out.println("NFA for (ab)*\n" + abk);
+        NFA b_or_c = NFA.uniteNFA(b, c);
+        System.out.println("NFA for [b|c]\n" + b_or_c);
+        NFA aborc = NFA.concatNFA(a, b_or_c);
+        System.out.println("NFA for a[b|c]\n" + aborc);
+        NFA abck = NFA.kleeneClosure(aborc);
+        System.out.println("NFA for (a[b|c])*\n" + abck);
+        NFA axa = NFA.concatNFA(a, NFA.concatNFA(NFA.anyWordNFA(), a));
+        System.out.println("NFA for a(.)*a\n" + axa);
+        NFA abck2 = NFA.kleeneClosure(NFA.uniteNFA(a, NFA.concatNFA(a, NFA.uniteNFA(b, c))));
+        System.out.println("NFA for ([a|a[b|c]])*\n" + abck2);
+        NFA x1 = NFA.directProduct(axa, abck2, FA.ProductAnnotation.AND);
+        System.out.println("NFA for ([a|a[b|c]])* && a(.)*a\n" + x1);
+
         assert (a.runNFA_('a'));
         assert (!a.runNFA_('b'));
         assert (!a.runNFA_('a', 'a'));
@@ -69,12 +90,6 @@ public class Tests {
         assert (ak_b.runNFA_('a', 'b'));
         assert (ak_b.runNFA_('a', 'a', 'b'));
         assert (!ak_b.runNFA_('a', 'b', 'b'));
-
-        NFA ab = NFA.concatNFA(a, b);
-        NFA abk = NFA.kleeneClosure(ab);
-        NFA b_or_c = NFA.uniteNFA(b, c);
-        NFA aborc = NFA.concatNFA(a, b_or_c);
-        NFA abck = NFA.kleeneClosure(aborc);
 
         assert (abk.runNFA(new ArrayList<>()));
         assert (!abk.runNFA_('a'));
@@ -90,8 +105,6 @@ public class Tests {
         assert (abck.runNFA_('a', 'b', 'a', 'c', 'a', 'b'));
         assert (!abck.runNFA_('a', 'b', 'c'));
 
-        NFA abck2 = NFA.kleeneClosure(NFA.uniteNFA(a, NFA.concatNFA(a, NFA.uniteNFA(b, c))));
-
         assert (abck2.runNFA(new ArrayList<>()));
         assert (abck2.runNFA_('a'));
         assert (abck2.runNFA_('a', 'a'));
@@ -104,11 +117,6 @@ public class Tests {
         assert (!abck2.runNFA_('a', 'b', 'c'));
         assert (!abck2.runNFA_('a', 'b', 'a', 'c', 'c'));
 
-
-        NFA xa = NFA.concatNFA(NFA.anyWordNFA(), a);
-
-        NFA axa = NFA.concatNFA(a, NFA.concatNFA(NFA.anyWordNFA(), a));
-
         assert (!axa.runNFA(new ArrayList()));
         assert (!axa.runNFA_('a'));
         assert (!axa.runNFA_('a', 'b'));
@@ -117,9 +125,6 @@ public class Tests {
         assert (axa.runNFA_('a', 'b', 'a'));
         assert (axa.runNFA_('a', 'b', 'c', 'a'));
         assert (axa.runNFA_('a', 'b', 'a', 'c', 'a'));
-
-        NFA x1 = NFA.directProduct(axa, abck2, FA.ProductAnnotation.AND);
-        x1.purgeUnattainableStates();
 
         assert (!x1.runNFA_('a'));
         assert (!x1.runNFA_('a', 'b'));
@@ -135,6 +140,5 @@ public class Tests {
         assert (x1.runNFA_('a', 'b', 'a', 'c', 'a'));
         assert (x1.runNFA_('a', 'b', 'a', 'a', 'c', 'a'));
 
-        System.out.println(x1);
     }
 }

@@ -80,7 +80,7 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
     for (Edge<Alphabet> e : epsilonEdges) result.removeEdge(e);
 
     result.purgeUnattainableStates();
-    result.identifyDevilVertices();
+    result.simplify();
 
     return result;
   }
@@ -212,6 +212,9 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
       }
 
     result.setAcceptStates(aS);
+
+    result.purgeUnattainableStates();
+    result.simplify();
 
     return result;
   }
