@@ -112,8 +112,14 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
     do {
       vC = getVertices().size();
 
+
+      //Step 1: Purge unattainable states
       purgeUnattainableStates();
 
+      //Step 2: Purge dead branches
+      for (State s : getVertices()) glueIfDeadEnd(s);
+
+      //Step 3: Identify "devil" vertices
       FA.Edge<Alphabet> e;
       Set<State> devilVertices = new HashSet<>();
       for (State v : getVertices()) if (allGoingTo(v, v) && !acceptStates.contains(v)) devilVertices.add(v);
@@ -132,8 +138,6 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
           removeVertex(v2);
         }
 
-        for (State s : getVertices()) glueIfDeadEnd(s);
-
         for (FA.Edge<Alphabet> i : getInboundEdges(devil)) {
           boolean hasOtherEdges = false;
           for (FA.Edge<Alphabet> e2 : getOutboundEdges(getDomain(i)))
@@ -145,6 +149,23 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
         }
       }
 
+      //Step 4: Remove explicit edges when default edge has the same effect
+      for (State s : getVertices()) {
+        Map<Alphabet, Set<State>> labelStates = new HashMap<>();
+        Set<State> defaultStates = new HashSet<>();
+        Set<Alphabet> purgeLabels = new HashSet<>();
+        for (FA.Edge<Alphabet> e2 : getOutboundEdges(s))
+          if (e2.isDefault()) defaultStates.add(getCodomain(e2)); else
+            labelStates.computeIfAbsent(e2.getLabel(), k -> new HashSet<>()).add(getCodomain(e2));
+        for (Alphabet a : labelStates.keySet())
+          if (defaultStates.equals(labelStates.get(a)))
+            purgeLabels.add(a);
+        for (Alphabet a : purgeLabels)
+          for (FA.Edge<Alphabet> e2 : getOutboundEdges(s))
+            if (e2.getLabel() != null && e2.getLabel().equals(a)) removeEdge(e2);
+      }
+
+      //Step 5: Identify equivalent states
       Map<Pair<Pair<Map<Alphabet, Set<State>>, Set<State>>, Boolean>, Set<State>> glueData = new HashMap<>();
 
       for (State s : getVertices()) {
@@ -187,12 +208,12 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
   public String toString() {
     StringBuilder result = new StringBuilder();
     List<List<State>> components = getOrderedVertices(getInitialState(), false);
+    Map<State, Integer> indices = new HashMap<State, Integer>();
+    int counter = 0;
     for (int i = 0; i < components.size(); i++) {
       int len = 0;
       boolean isLast = i == components.size() - 1;
       List<State> component = components.get(i);
-      Map<State, Integer> indices = new HashMap<State, Integer>();
-      int counter = 0;
       for (State s : component) {
         indices.put(s, counter++);
         int cL = String.valueOf(counter - 1).length();
@@ -249,19 +270,38 @@ public abstract class FA<State, Alphabet> extends DirectedGraph<State, FA.Edge<A
           }
         });
 
+        Map<Set<State>, List<FA.Edge<Alphabet>>> coc = new LinkedHashMap<>();
+        for (Set<Edge<Alphabet>> se : equalityClasses)  {
+          Set<State> cds = new HashSet<>();
+          for (Edge<Alphabet> e2 : se) cds.add(getCodomain(e2));
+          coc.computeIfAbsent(cds, k -> new ArrayList<>()).add(se.iterator().next());
+        }
+
         Map<String, Set<Edge<Alphabet>>> m = new HashMap<>();
 
-        for (Set<Edge<Alphabet>> es : equalityClasses) {
-          result.append(es.iterator().next().toString()).append(" -> ");
-          int cl = es.size() - 1;
+        for (Set<State> es : coc.keySet()) {
+          int cl = coc.get(es).size() - 1;
           if (cl > 0) result.append("{");
-          for (Edge<Alphabet> e : es) {
-            index = indices.get(getCodomain(e));
+          for (FA.Edge<Alphabet> e2 : coc.get(es)) {
+            result.append(e2.toString());
+            if (cl > 0)
+              result.append(", ");
+            cl--;
+          }
+          if (coc.get(es).size() > 1) result.append("}");
+
+          result.append(" -> ");
+
+          cl = es.size() - 1;
+          if (cl > 0) result.append("{");
+          for (State s2 : es) {
+            index = indices.get(s2);
             result.append(String.valueOf(index));
             if (cl > 0) result.append(", ");
             cl--;
           }
           if (es.size() > 1) result.append("}");
+
           result.append("; ");
         }
 

@@ -201,38 +201,30 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
 
     result.setAcceptStates(aS);
 
-    result.purgeUnattainableStates();
+//    result.purgeUnattainableStates();
     result.simplify();
 
     return result;
   }
 
-  public static<X> NFA<Integer, X> emptyLanguageNFA() {
-    NFA<Integer, X> result = new NFA<>();
-    result.addVertex(0);
-    result.addVertex(1);
-    result.addVertex(-1);
-    result.addDefaultTransition(-1, -1);
-    result.addDefaultTransition(0, -1);
-    result.addDefaultTransition(1, -1);
-    result.addAcceptState(1);
-    result.setInitialState(0);
-    return result;
-  }
-
-  public static<X> NFA<Integer, X> emptyWordNFA() {
-    NFA<Integer, X> result = new NFA<>();
-    result.addVertex(1);
-    result.addVertex(-1);
-    result.addAcceptState(1);
-    result.setInitialState(1);
-    result.addDefaultTransition(1, -1);
-    result.addDefaultTransition(-1, -1);
+  public static<X> NFA<Void, X> emptyNFA() {
+    NFA<Void, X> result = new NFA<>();
+    result.addVertex(null);
+    result.addDefaultTransition(null, null);
+    result.setInitialState(null);
     return result;
   }
 
   public static<X> NFA<Integer, X> singleSymbolNFA(X x) {
-    NFA<Integer, X> result = emptyLanguageNFA();
+    NFA<Integer, X> result = new NFA<>();
+    result.addVertex(0);
+    result.addVertex(1);
+    result.addVertex(-1);
+    result.addAcceptState(1);
+    result.setInitialState(0);
+    result.addDefaultTransition(-1, -1);
+    result.addDefaultTransition(0, -1);
+    result.addDefaultTransition(1, -1);
     result.addTransition(0, x, 1);
     return result;
   }
