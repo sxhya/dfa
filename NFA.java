@@ -201,7 +201,6 @@ public class NFA<State, Alphabet> extends FA<State, Alphabet> {
 
     result.setAcceptStates(aS);
 
-//    result.purgeUnattainableStates();
     result.simplify();
 
     return result;

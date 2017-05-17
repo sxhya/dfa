@@ -147,4 +147,14 @@ public class Tests {
         assert (x1.runNFA_('a', 'b', 'a', 'c', 'a'));
         assert (x1.runNFA_('a', 'b', 'a', 'a', 'c', 'a'));
     }
+
+    @Test
+    public void test3() {
+        System.out.println(REWrappers.VCLANG_ID);
+        System.out.println(REWrappers.VCLANG_INFIX);
+
+        NFA<?, Character> i = NFA.directProduct(REWrappers.VCLANG_ID.toAutomaton(), REWrappers.VCLANG_INFIX.toAutomaton(), FA.ProductAnnotation.AND);
+        boolean ok = !i.acceptedStateAttainable();
+        assert(ok);
+    }
 }
